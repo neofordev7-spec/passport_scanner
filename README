@@ -1,0 +1,93 @@
+# 🛡️ Passport MRZ Scanner AI (TrOCR Version)
+
+Ushbu loyiha **Microsoft TrOCR (Transformer-based Optical Character Recognition)** modeli yordamida pasportlardagi MRZ (Machine Readable Zone) kodlarini o'qish uchun ishlab chiqilgan.
+
+Loyiha **Flask** veb-serverida ishlaydi va kompyuter ko'rish (Computer Vision) uchun **OpenCV** hamda **Hugging Face Transformers** kutubxonalaridan foydalanadi.
+
+## 🚀 Xususiyatlari
+- **Yuqori aniqlik:** Tesseract yoki boshqa OCR lardan farqli o'laroq, harfma-harf emas, balki kontekstni tushungan holda o'qiydi.
+- **AI Model:** `microsoft/trocr-large-printed` (yoki base) modelidan foydalanadi.
+- **Avtomatik bo'lish:** MRZ zonasi 2 qatorli bo'lgani uchun, tizim rasmni avtomatik ikkiga bo'lib, har bir qatorni alohida tahlil qiladi.
+
+## 📋 Talablar (Requirements)
+- **Python:** 3.8 yoki yuqori versiya.
+- **RAM:** Kamida 4 GB (Base model uchun) yoki 8 GB+ (Large model uchun).
+- **Disk:** Kamida 2 GB bo'sh joy (Modelni yuklab olish uchun).
+- **GPU (Tavsiya etiladi):** NVIDIA GPU bo'lsa, ishlash tezligi 10x oshadi.
+
+## 🛠️ O'rnatish
+
+1. **Repozitoriyni klonlash yoki fayllarni joylashtirish:**
+   Loyihani papkasiga kiring.
+
+2. **Virtual muhit yaratish (Tavsiya etiladi):**
+   ```bash
+   python -m venv venv
+   # Windows uchun:
+   venv\Scripts\activate
+   # Linux/Mac uchun:
+   source venv/bin/activate
+Kutubxonalarni o'rnatish:
+
+Bash
+pip install -r requirements.txt
+(Eslatma: Agar serverda GPU bo'lsa, PyTorch-ning GPU versiyasini o'rnatish tavsiya etiladi).
+
+▶️ Ishga tushirish
+Serverni ishga tushirish uchun quyidagi buyruqni bering:
+
+Bash
+python app.py
+Birinchi marta ishga tushganda, model internetdan yuklab olinadi (1.5 GB+). Bu internet tezligiga qarab vaqt olishi mumkin.
+
+Server ishga tushgach, brauzerda quyidagi manzilga kiring: http://127.0.0.1:5000
+
+📸 Foydalanish bo'yicha qo'llanma
+Input (Rasm): Tizimga faqat pasportning MRZ qismi (pastki 2 qator) qirqib olingan rasmni yuklang.
+
+Butun pasport rasmini yuklamang, chunki algoritm rasmni teng ikkiga bo'lib o'qiydi.
+
+Rasm tiniq va gorizontal holatda bo'lishi kerak.
+
+📂 Fayl tuzilishi
+project_folder/
+│
+├── app.py              # Asosiy Python kod (Flask server)
+├── requirements.txt    # Kerakli kutubxonalar
+├── README.md           # Hujjatlar
+└── templates/          # HTML fayllar papkasi
+    └── index.html      # Frontend qismi
+⚠️ Eslatma
+Agar "Super Kompyuter" yoki kuchli serverda ishlatilsa, app.py ichida kodni GPU (CUDA) da ishlashga moslash orqali tezlikni oshirish mumkin (device='cuda').
+
+Muallif: [Ismingiz] Model: Microsoft TrOCR
+
+
+---
+
+### 🔥 Super Kompyuter uchun "Bonus" Maslahat
+
+Agar sen buni rostdan ham kuchli mashinada (GPU bor serverda) ishlatmoqchi bo'lsang, kodning modelni yuklash qismiga kichik o'zgarish kiritib qo'ysang, tezlik **uchib ketadi** 🚀.
+
+`app.py` da model yuklash qismini mana bunday qilsang bo'ladi:
+
+```python
+# GPU bormi tekshiramiz
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"⚙️ Ishlash rejimi: {device.upper()}")
+
+processor = TrOCRProcessor.from_pretrained('microsoft/trocr-large-printed')
+model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-large-printed').to(device) # .to(device) qo'shildi
+
+# ...
+
+def read_line_with_trocr(image_cv2):
+    image_pil = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB)).convert("RGB")
+    
+    # Pixel valuelarni ham GPU ga tashlash kerak
+    pixel_values = processor(images=image_pil, return_tensors="pt").pixel_values.to(device) 
+    
+    generated_ids = model.generate(pixel_values)
+    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    
+    return clean_mrz_text(generated_text)

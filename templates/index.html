@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRZ Skaner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background-color: #218838;
+        }
+
+        #preview {
+            margin: 20px auto;
+            max-width: 100%;
+            border: 1px solid #ddd;
+            display: none;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: left;
+            display: inline-block;
+        }
+
+        .mrz-line {
+            font-family: monospace;
+            background: #eee;
+            padding: 5px;
+            margin: 2px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🛂 Pasport MRZ Skaner</h1>
+
+    <label for="file-upload" class="btn">📷 Rasm Yuklash</label>
+    <input id="file-upload" type="file" accept="image/*" style="display:none" onchange="scanImage(event)">
+
+    <br>
+    <img id="preview" src="#">
+
+    <h3 id="status"></h3>
+
+    <div id="result"></div>
+
+    <script>
+        async function scanImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 1. Rasmni ko'rsatish
+            const preview = document.getElementById('preview');
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+
+            document.getElementById('status').innerText = "⏳ O'qilmoqda...";
+            document.getElementById('result').innerHTML = "";
+
+            // 2. Rasmni Python serverga jo'natish
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // 3. Javobni ko'rsatish
+                if (data.success) {
+                    document.getElementById('status').innerText = "✅ Natija:";
+                    let html = "";
+                    data.lines.forEach(line => {
+                        html += `<div class='mrz-line'>${line}</div>`;
+                    });
+                    document.getElementById('result').innerHTML = html;
+                } else {
+                    document.getElementById('status').innerText = "❌ Xatolik: " + data.error;
+                }
+            } catch (error) {
+                document.getElementById('status').innerText = "❌ Server bilan aloqa yo'q!";
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+
+</html>

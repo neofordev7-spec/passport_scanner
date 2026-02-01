@@ -1,0 +1,10 @@
+flask
+transformers
+# torch
+torchvision
+torchaudio
+pillow
+opencv-python
+numpy
+sentencepiece
+protobuf
