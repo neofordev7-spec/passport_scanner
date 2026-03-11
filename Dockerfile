@@ -8,14 +8,24 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Avval oddiy kutubxonalarni o'rnatamiz
+# Avval oddiy kutubxonalarni o'rnatish
 COPY requirements.txt .
+
+# Pip'ni eng yangi versiyaga ko'tarish (yuklashdagi xatoliklarni kamaytiradi)
+RUN python -m pip install --upgrade pip
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Maxsus muhit (environment) o'rnatilishi:
-# Diqqat: -i o'rniga --extra-index-url ishlatildi!
-RUN python -m pip install paddlepaddle==3.2.0 --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
-RUN python -m pip install "paddleocr[all]"
+# Diqqat: Uzilib qolmasligi uchun timeout va retries qo'shildi!
+RUN python -m pip install paddlepaddle==3.2.0 \
+    --default-timeout=1000 \
+    --retries=5 \
+    --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
+
+RUN python -m pip install "paddleocr[all]" \
+    --default-timeout=1000 \
+    --retries=5
 
 # Qolgan barcha kodlarni nusxalaymiz
 COPY . .
